@@ -4,53 +4,26 @@ import './App.css';
 
 export default function App() {
   const [dt, setDt] = useState([]);
-  const [currentIndex, setCurrentIndex] = useState(0); // Track the index of the displayed joke
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
 
-  // useEffect(() => {
-  //   const cachedData = localStorage.getItem('cachedJokes');
-  //   if (cachedData) {
-  //     setDt(JSON.parse(cachedData));
-  //     setLoading(false);
-  //   }
-  //   fetchData();
-  // }, []);
+  // Initialize data from localStorage immediately
+  useEffect(() => {
+    const cachedData = localStorage.getItem('cachedJokes');
+    if (cachedData) {
+      setDt(JSON.parse(cachedData));
+      setLoading(false);
+    }
+  }, []);
 
-  // const fetchData = async () => {
-  //   try {
-  //     const response = await axios.get('http://localhost:4000/post');
-  //     setDt(response.data);
-  //     setError(null);
-  //     localStorage.setItem('cachedJokes', JSON.stringify(response.data));
-  //   } catch (err) {
-  //     console.error('Error fetching data:', err);
-  //     setError('Unable to fetch new data. Showing cached data if available.');
-  //     if (dt.length === 0) {
-  //       setError('No data available. Please check your connection and try again.');
-  //     }
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
-  // const handleNextJoke = () => {
-  //   setCurrentIndex((prevIndex) => (prevIndex + 1) % dt.length);
-  // };
-
-  // if (loading) {
-  //   return (
-  //     <div className="flex items-center justify-center p-4">
-  //       <p>Loading...</p>
-  //     </div>
-  //   );
-  // }
-
-useEffect(() => {
+  // Handle online/offline status
+  useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true);
       setError(null);
-      fetchData(); // Refresh data when coming back online
+      fetchData();
     };
 
     const handleOffline = () => {
@@ -61,41 +34,29 @@ useEffect(() => {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
+    // Initial fetch if online
+    if (navigator.onLine) {
+      fetchData();
+    }
+
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
 
-  // Initial data load
-  useEffect(() => {
-    const loadInitialData = async () => {
-      const cachedData = localStorage.getItem('cachedJokes');
-      
-      if (cachedData) {
-        const parsedData = JSON.parse(cachedData);
-        setDt(parsedData);
-        setLoading(false);
-      }
-
-      if (navigator.onLine) {
-        await fetchData();
-      } else {
-        setError('You are offline. Showing cached data.');
-        setLoading(false);
-      }
-    };
-
-    loadInitialData();
-  }, []);
-
   const fetchData = async () => {
     try {
       const response = await axios.get('http://localhost:4000/post', {
-        timeout: 5000 // 5 second timeout
+        timeout: 5000,
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
       });
-      
+
       if (response.data && response.data.length > 0) {
+        // Update state and cache
         setDt(response.data);
         localStorage.setItem('cachedJokes', JSON.stringify(response.data));
         setError(null);
@@ -119,18 +80,24 @@ useEffect(() => {
     setCurrentIndex((prevIndex) => (prevIndex + 1) % dt.length);
   };
 
-  if (loading) {
+  if (loading && dt.length === 0) {
     return (
       <div className="flex items-center justify-center p-4">
         <p>Loading...</p>
       </div>
     );
   }
+
   return (
     <div className="p-4">
       {error && (
         <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
           {error}
+        </div>
+      )}
+      {!isOnline && (
+        <div className="bg-orange-100 border-l-4 border-orange-500 text-orange-700 p-4 mb-4">
+          You are currently offline
         </div>
       )}
 
@@ -145,10 +112,14 @@ useEffect(() => {
         </div>
       )}
 
-      <button onClick={handleNextJoke} className="btn" id="jokeBtn">
+      <button 
+        onClick={handleNextJoke} 
+        className="btn" 
+        id="jokeBtn"
+        disabled={dt.length === 0}
+      >
         Next joke 😂😂
       </button>
     </div>
   );
 }
-
