@@ -8,25 +8,106 @@ export default function App() {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // useEffect(() => {
+  //   const cachedData = localStorage.getItem('cachedJokes');
+  //   if (cachedData) {
+  //     setDt(JSON.parse(cachedData));
+  //     setLoading(false);
+  //   }
+  //   fetchData();
+  // }, []);
+
+  // const fetchData = async () => {
+  //   try {
+  //     const response = await axios.get('http://localhost:4000/post');
+  //     setDt(response.data);
+  //     setError(null);
+  //     localStorage.setItem('cachedJokes', JSON.stringify(response.data));
+  //   } catch (err) {
+  //     console.error('Error fetching data:', err);
+  //     setError('Unable to fetch new data. Showing cached data if available.');
+  //     if (dt.length === 0) {
+  //       setError('No data available. Please check your connection and try again.');
+  //     }
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
+
+  // const handleNextJoke = () => {
+  //   setCurrentIndex((prevIndex) => (prevIndex + 1) % dt.length);
+  // };
+
+  // if (loading) {
+  //   return (
+  //     <div className="flex items-center justify-center p-4">
+  //       <p>Loading...</p>
+  //     </div>
+  //   );
+  // }
+
+useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      setError(null);
+      fetchData(); // Refresh data when coming back online
+    };
+
+    const handleOffline = () => {
+      setIsOnline(false);
+      setError('You are currently offline. Showing cached data.');
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Initial data load
   useEffect(() => {
-    const cachedData = localStorage.getItem('cachedJokes');
-    if (cachedData) {
-      setDt(JSON.parse(cachedData));
-      setLoading(false);
-    }
-    fetchData();
+    const loadInitialData = async () => {
+      const cachedData = localStorage.getItem('cachedJokes');
+      
+      if (cachedData) {
+        const parsedData = JSON.parse(cachedData);
+        setDt(parsedData);
+        setLoading(false);
+      }
+
+      if (navigator.onLine) {
+        await fetchData();
+      } else {
+        setError('You are offline. Showing cached data.');
+        setLoading(false);
+      }
+    };
+
+    loadInitialData();
   }, []);
 
   const fetchData = async () => {
     try {
-      const response = await axios.get('http://localhost:4000/post');
-      setDt(response.data);
-      setError(null);
-      localStorage.setItem('cachedJokes', JSON.stringify(response.data));
+      const response = await axios.get('http://localhost:4000/post', {
+        timeout: 5000 // 5 second timeout
+      });
+      
+      if (response.data && response.data.length > 0) {
+        setDt(response.data);
+        localStorage.setItem('cachedJokes', JSON.stringify(response.data));
+        setError(null);
+      }
     } catch (err) {
       console.error('Error fetching data:', err);
-      setError('Unable to fetch new data. Showing cached data if available.');
-      if (dt.length === 0) {
+      const cachedData = localStorage.getItem('cachedJokes');
+      
+      if (cachedData && dt.length === 0) {
+        setDt(JSON.parse(cachedData));
+        setError('Unable to fetch new data. Showing cached data.');
+      } else if (!cachedData && dt.length === 0) {
         setError('No data available. Please check your connection and try again.');
       }
     } finally {
@@ -45,7 +126,6 @@ export default function App() {
       </div>
     );
   }
-
   return (
     <div className="p-4">
       {error && (
@@ -71,3 +151,4 @@ export default function App() {
     </div>
   );
 }
+
