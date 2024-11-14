@@ -1,5 +1,7 @@
 {
   "dependencies": {
+    "compression": "^1.7.5",
+    "express-useragent": "^1.0.15",
     "node-cache": "^5.1.2"
   }
 }
