@@ -69,7 +69,7 @@ export default function App() {
         setDt(JSON.parse(cachedData));
         setError('Unable to fetch new data. Showing cached data.');
       } else if (!cachedData && dt.length === 0) {
-        setError('No data available. Please check your connection and try again.');
+        // setError('No data available. Please check your connection and try again.');
       }
     } finally {
       setLoading(false);
