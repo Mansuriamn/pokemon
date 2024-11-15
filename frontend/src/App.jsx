@@ -9,15 +9,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
-  // Get the API URL based on environment
-  const getApiUrl = () => {
-    if (window.location.hostname === 'localhost') {
-      return 'http://localhost:4000';
-    }
-    // Replace with your actual backend URL
-    return 'https://Aman-localhost.onrender.com';
-  };
-
+  // Initialize data from localStorage immediately
   useEffect(() => {
     const cachedData = localStorage.getItem('cachedJokes');
     if (cachedData) {
@@ -26,6 +18,7 @@ export default function App() {
     }
   }, []);
 
+  // Handle online/offline status
   useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true);
@@ -41,6 +34,7 @@ export default function App() {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
+    // Initial fetch if online
     if (navigator.onLine) {
       fetchData();
     }
@@ -53,16 +47,16 @@ export default function App() {
 
   const fetchData = async () => {
     try {
-      const response = await axios.get(`${getApiUrl()}/post`, {
+      const response = await axios.get('http://localhost:4000/post', {
         timeout: 5000,
-        withCredentials: false, // Important for CORS
         headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
         }
       });
 
       if (response.data && response.data.length > 0) {
+        // Update state and cache
         setDt(response.data);
         localStorage.setItem('cachedJokes', JSON.stringify(response.data));
         setError(null);
@@ -75,7 +69,7 @@ export default function App() {
         setDt(JSON.parse(cachedData));
         setError('Unable to fetch new data. Showing cached data.');
       } else if (!cachedData && dt.length === 0) {
-        setError('No data available. Please check your connection and try again.');
+        // setError('No data available. Please check your connection and try again.');
       }
     } finally {
       setLoading(false);
